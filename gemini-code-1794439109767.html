@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draggable 3D glTF Model</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            font-family: sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: #ffffff;
+            pointer-events: none;
+            font-size: 14px;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Click and drag to rotate the 3D object</div>
+
+    <!-- Import Three.js and add-ons via ES Modules -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // 1. Scene, Camera, and Renderer Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 2);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Add Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        // 3. Add OrbitControls for Drag-to-Rotate / Zoom functionality
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // 4. Reconstruct your glTF/GLB data into a Blob URL
+        // (Embedding the raw string data provided in your prompt)
+        const rawData = `glTF    Lá  ð   JSON...`; // Place your raw string or load via external .glb file path here
+        
+        // Alternative: If loading an external file, replace the Blob step with:
+        // const loader = new GLTFLoader();
+        // loader.load('path-to-your-model.glb', function (gltf) { ... });
+
+        // For raw binary data integration, convert string to Uint8Array:
+        const encoder = new TextEncoder();
+        const rawByteArray = encoder.encode(rawData);
+        const blob = new Blob([rawByteArray], { type: 'application/octet-stream' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        // 5. Load the Model
+        const loader = new GLTFLoader();
+        loader.load(blobUrl, (gltf) => {
+            const model = gltf.scene;
+            
+            // Center and scale model if necessary
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.sub(center); // Center the model
+            
+            scene.add(model);
+        }, undefined, (error) => {
+            console.error('An error occurred while loading the glTF model:', error);
+        });
+
+        // 6. Handle Window Resizing
+        window.addEventListener('resize', onWindowResize);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // 7. Render Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
